@@ -54,9 +54,3 @@ class S7ModbusClient(ModbusWrapperClient):
         self.setReadingRegisters(0,8)
         self.setWritingRegisters(8,9)
         #self.startListening()
-        
-        
-        
-    
-
-    
