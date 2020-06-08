@@ -38,7 +38,7 @@
 
 from modbus.modbus_wrapper_client import ModbusWrapperClient
 class S7ModbusClient(ModbusWrapperClient):
-    def __init__(self,host,port=502,rate=50,reset_registers=True):
+    def __init__(self,host,port=502,rate=50,reset_registers=True,disable_topics=False):
         """
             :param host: Contains the IP adress of the modbus server
             :type host: string
@@ -46,9 +46,11 @@ class S7ModbusClient(ModbusWrapperClient):
             :type rate: float
             :param reset_registers: Defines if the holding registers should be reset to 0 after they have been read. Only possible if they are writeable
             :type reset_registers: bool
+            :param disable_topics: Disables ROS subscriber/publisher if True, disabling automatic reading and writing. Voids startListening and stopListening, will raise exception if called.
+            :type disable_topics: bool
         """
 #         print("Use the appropriate Step7 Project to enable the Modbus Server on your Siemens S1200 PLC")
-        ModbusWrapperClient.__init__(self,host,port,rate,reset_registers)
+        ModbusWrapperClient.__init__(self,host,port,rate,reset_registers,disable_topics)
         self.setReadingRegisters(0,8)
         self.setWritingRegisters(8,9)
         #self.startListening()

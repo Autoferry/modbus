@@ -59,7 +59,7 @@ class ModbusWrapperClient():
         Wrapper that integrates python modbus into standardized ros msgs.
         The wrapper is able to read from and write to a standard modbus tcp/ip server.
     """
-    def __init__(self,host,port=502,rate=50,reset_registers=True,sub_topic="modbus_wrapper/output",pub_topic="modbus_wrapper/input"):
+    def __init__(self,host,port=502,rate=50,reset_registers=True,sub_topic="modbus_wrapper/output",pub_topic="modbus_wrapper/input",disable_topics=False):
         """
             Use subscribers and publisher to communicate with the modbus server. Check the scripts for example code.
             :param host: Contains the IP adress of the modbus server
@@ -70,6 +70,8 @@ class ModbusWrapperClient():
             :type rate: float
             :param reset_registers: Defines if the holding registers should be reset to 0 after they have been read. Only possible if they are writeable
             :type reset_registers: bool
+            :param disable_topics: Disables ROS subscriber/publisher if True, disabling automatic reading and writing. Voids startListening and stopListening, will raise exception if called.
+            :type disable_topics: bool
         """
         try:
             self.client = ModbusTcpClient(host,port)
@@ -95,10 +97,12 @@ class ModbusWrapperClient():
         
         self.__last_output_time = rospy.get_time()
         self.__mutex = Lock()
-        
-        self.__sub = rospy.Subscriber(sub_topic,HoldingRegister,self.__updateModbusOutput,queue_size=500)
-        self.__pub = rospy.Publisher(pub_topic,HoldingRegister,queue_size=500, latch=True)
-        
+
+        self.__disable_topics = disable_topics
+        if not disable_topics:
+            self.__sub = rospy.Subscriber(sub_topic,HoldingRegister,self.__updateModbusOutput,queue_size=500)
+            self.__pub = rospy.Publisher(pub_topic,HoldingRegister,queue_size=500, latch=True)
+
          
         
         rospy.on_shutdown(self.closeConnection)
@@ -107,6 +111,8 @@ class ModbusWrapperClient():
         """
             Non blocking call for starting the listener for the readable modbus server registers 
         """
+        if self.__disable_topics:
+            raise RuntimeError('Wrapper started with disable_topics=True, disabling automatic reading.')
         #start reading the modbus
         self.post.__updateModbusInput()
         
@@ -114,6 +120,8 @@ class ModbusWrapperClient():
         """
             Stops the listener loop
         """
+        if self.__disable_topics:
+            raise RuntimeError('Wrapper started with disable_topics=True, disabling automatic reading.')
         self.stop_listener = True
         while not rospy.is_shutdown() and self.listener_stopped is False:
             rospy.sleep(0.01)
@@ -222,7 +230,7 @@ class ModbusWrapperClient():
                 if not rospy.is_shutdown() :
     #                 print "writing address",address,"value"
                     self.client.write_registers(address, values)
-                    self.output = values
+                    self.output = values  # TODO: This should likely be self.__output, does not seem to do anything
             except Exception, e:
                 rospy.logwarn("Could not write values %s to address %d. Exception %s",str(values),address, str(e))
                 raise e
